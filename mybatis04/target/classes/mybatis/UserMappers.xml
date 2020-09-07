@@ -1,0 +1,7 @@
+
+<mapper namespace="bat.ke.qq.com.UserMapper">
+    <select id="selectUser" parameterType="integer" resultType="bat.ke.qq.com.User">
+        select * from user where id = %d
+    </select>
+
+</mapper>

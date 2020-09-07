@@ -1,0 +1,117 @@
+步骤：宏观（思想）》微观（程序入口）》图解（代码流程图）
+
+
+<configuration>
+<properties resource="config.properties"/>
+<environments default="development">
+<environment id="development">
+<transactionManager type="JDBC"/>
+<dataSource type="POOLED">
+<property name="driver" value="${driver}"/>
+<property name="url" value="${url}"/>
+<property name="username" value="${username}"/>
+<property name="password" value="${password}"/>
+</dataSource>
+</environment>
+</environments>
+<mappers>
+<mapper resource="mybatis/UserMapper.xml"/>
+</mappers>
+</configuration>
+
+＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝＝
+<environments default="development">
+<environment id="development">
+<transactionManager type="JDBC"/>
+<dataSource type="POOLED">
+<property name="driver" value="com.mysql.jdbc.Driver"/>
+<property name="url" value="jdbc:mysql://localhost:3306/mybatis"/>
+<property name="username" value="root"/>
+<property name="password" value="root"/>
+</dataSource>
+</environment>
+</environments>
+
+========================
+
+<mappers>
+<mapper resource="mybatis/UserMapper.xml"/>
+</mappers>
+
+===========
+<mapper namespace="bat.ke.qq.com.mybatis.mapper.UserMapper">
+<select resultType="bat.ke.qq.com.bat.ke.qq.com.pojo.User" id="selectUser">
+        select * from bat.ke.qq.com.pojo.User where id = #{id}
+    </select>
+</mapper>
+
+org.apache.ibatis.session.Configuration　全局配置的ｊａｖａ类
+org.apache.ibatis.mapping.Environment
+org.apache.ibatis.mapping.MappedStatement
+
+一、mybatis是如何获取数据源
+  >org.apache.ibatis.session.SqlSessionFactoryBuilder.build(java.io.InputStream)　
+  　＞org.apache.ibatis.builder.xml.XMLConfigBuilder
+  org.apache.ibatis.builder.xml.XMLConfigBuilder.parse
+  　　　＞org.apache.ibatis.builder.xml.XMLConfigBuilder.environmentsElement
+  　　　　　＞org.apache.ibatis.datasource.DataSourceFactory.getDataSource
+  　　　　　　　＞org.apache.ibatis.session.Configuration.setEnvironment###### set数据源
+
+ 二、Mybatis是如何获取执行语句的sql
+   >org.apache.ibatis.session.SqlSessionFactoryBuilder.build(java.io.InputStream)　
+   　＞org.apache.ibatis.builder.xml.XMLConfigBuilder
+       >org.apache.ibatis.builder.xml.XMLConfigBuilder.mapperElement
+         >org.apache.ibatis.builder.xml.XMLMapperBuilder
+           >org.apache.ibatis.builder.xml.XMLMapperBuilder.parse
+             >org.apache.ibatis.builder.xml.XMLMapperBuilder.buildStatementFromContext(java.util.List<org.apache.ibatis.parsing.XNode>)
+               >org.apache.ibatis.builder.xml.XMLStatementBuilder.parseStatementNode
+                >org.apache.ibatis.session.Configuration.addMappedStatement ######set 这个sql
+
+
+三 Mybatis如何操作的
+org.apache.ibatis.session.defaults.DefaultSqlSessionFactory.openSession()
+ >org.apache.ibatis.session.defaults.DefaultSqlSessionFactory.openSessionFromDataSource
+  >org.apache.ibatis.session.Configuration.newExecutor(org.apache.ibatis.transaction.Transaction, org.apache.ibatis.session.ExecutorType)
+    >org.apache.ibatis.session.defaults.DefaultSqlSession.DefaultSqlSession(org.apache.ibatis.session.Configuration, org.apache.ibatis.executor.Executor, boolean)
+      >org.apache.ibatis.session.defaults.DefaultSqlSession.selectOne(java.lang.String, java.lang.Object)
+        >org.apache.ibatis.executor.SimpleExecutor.doQuery
+           >org.apache.ibatis.executor.statement.PreparedStatementHandler.query
+             >org.apache.ibatis.executor.resultset.ResultSetWrapper.ResultSetWrapper
+
+
+四、mybatis自带的selectOne和我们自定义的selectUser方法底层实现原理分析(底层都是通过代理的方式调用了mybatis自带的方法)
+
+org.apache.ibatis.session.defaults.DefaultSqlSession.getMapper
+ >org.apache.ibatis.session.Configuration.getMapper
+   >org.apache.ibatis.binding.MapperRegistry.getMapper
+     >org.apache.ibatis.binding.MapperProxyFactory.newInstance(org.apache.ibatis.session.SqlSession)
+       >Proxy.newProxyInstance(mapperInterface.getClassLoader(), new Class[] { mapperInterface }, mapperProxy);  Spring AOP   cglib java动态代理
+         >org.apache.ibatis.binding.MapperProxy.invoke
+
+
+五、注解的@Select源码分析
+   >org.apache.ibatis.session.SqlSessionFactoryBuilder.build(java.io.InputStream)　
+   　＞org.apache.ibatis.builder.xml.XMLConfigBuilder
+       >org.apache.ibatis.builder.xml.XMLConfigBuilder.mapperElement
+           >org.apache.ibatis.session.Configuration.addMapper
+             >org.apache.ibatis.binding.MapperRegistry.addMapper
+               >org.apache.ibatis.binding.MapperRegistry.addMapper
+                 >org.apache.ibatis.builder.annotation.MapperAnnotationBuilder.parseStatement
+                   >org.apache.ibatis.builder.annotation.MapperAnnotationBuilder.getSqlSourceFromAnnotations
+                     >org.apache.ibatis.builder.annotation.MapperAnnotationBuilder.buildSqlSourceFromStrings
+                       >org.apache.ibatis.builder.SqlSourceBuilder.parse
+
+
+ 六、#{id}是怎么替换成?
+ org.apache.ibatis.parsing.GenericTokenParser.parse
+
+
+ 七、mybatis的拦截器的解析
+>org.apache.ibatis.session.SqlSessionFactoryBuilder.build(java.io.InputStream)　
+　＞org.apache.ibatis.builder.xml.XMLConfigBuilder
+    >org.apache.ibatis.builder.xml.XMLConfigBuilder.pluginElement
+      >org.apache.ibatis.session.Configuration.addInterceptor
+        >org.apache.ibatis.plugin.InterceptorChain
+          >bat.ke.qq.com.SqlPrintInterceptor.plugin
+            >org.apache.ibatis.plugin.Plugin 动态代理
+              >bat.ke.qq.com.SqlPrintInterceptor.intercept
